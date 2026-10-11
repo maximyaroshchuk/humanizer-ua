@@ -56,7 +56,8 @@ ERRORS = [
         r"|\b[ЙйІі]деться\s+не\s+(?:лише|тільки|просто)\b"
         r"|\b(?:це|Це)\s+не\s+просто\b[^.!?\n]{1,60}[—–-]\s*це\b", re.I)),
     ("§21 рублені фрагменти", re.compile(
-        r"(?:^|[.!?]\s+)(?:Без|Жодн\w+|Ніяк\w+|Нуль|Ані)\s[^.!?\n]{1,35}[.!]\s+(?:Без|Жодн\w+|Ніяк\w+|Нуль|Ані)\s")),
+        r"(?:^\s*|[.!?]\s+)(?:(?:Без|Жодн\w+|Ніяк\w+|Нуль|Ані)\s[^.!?\n]{1,35}[.!](?:\s+|$)){2,}"
+        r"(?:(?:Лише|Тільки|Просто|Одразу)\b[^.!?\n]{0,30}[.!])?")),
     ("§36 мат-знаки в прозі", re.compile(r"[→⇒←↔⟶≈≠≥≤]|(?<=\S)\s[=<>+&]\s(?=\S)|\bvs\.?(?=\s)")),
     ("§35 дефіс замість тире", re.compile(r"(?<=[^\s\-|])\s-\s(?=\S)")),
 ]
@@ -126,13 +127,13 @@ WARN_RX = [
         r",\s+(?:підкреслюючи|демонструючи|відображаючи|засвідчуючи|сприяючи|забезпечуючи|"
         r"роблячи|наголошуючи|ілюструючи|відкриваючи|створюючи)\b[^.!?\n]*[.!?]")),
     ("§20 двокрапка-підводка", re.compile(
-        r"(?:^|[.!?]\s+)(?:Найцікавіше|Найважливіше|Головне|Результат|Висновок|Суть|Секрет|Відповідь|"
+        r"(?:^\s*|[.!?]\s+)(?:Найцікавіше|Найважливіше|Головне|Результат|Висновок|Суть|Секрет|Відповідь|"
         r"Підсумок|Правда|Проблема|Факт|Ключ|Ось що \w+|Ось як|Ось чому|Мораль)[^.!?:\n]{0,25}:\s")),
-    ("§17 риторичне запитання", re.compile(r"(?:^|[.!?]\s+)[^.!?\n]{3,60}\?\s+[%s]" % UPPER)),
+    ("§17 риторичне запитання", re.compile(r"(?:^\s*|[.!?]\s+)[^.!?\n]{3,60}\?\s+[%s]" % UPPER)),
     ("§19 тире перед «відкриттям»", re.compile(
         r"\s[—–]\s+(?:неймовірн|вражаюч|колосальн|величезн|очевидн|простий|проста|просте)\w*[.!]", re.I)),
     ("§9 звертання в називному", re.compile(
-        r"(?:^|[.!?]\s+)(?:Шановн(?:ий|а)|Дорог(?:ий|а)|Любий|Люба|Привіт|Вітаю|Добрий день|Пане|Пані)"
+        r"(?:^\s*|[.!?]\s+)(?:Шановн(?:ий|а)|Дорог(?:ий|а)|Любий|Люба|Привіт|Вітаю|Добрий день|Пане|Пані)"
         r",?\s+([%s][%s%s]+(?:\s+[%s][%s%s]+)?)\s*[,!]" % (UPPER, LOWER, APOS, UPPER, LOWER, APOS))),
     ("§35 дріб через крапку", re.compile(r"(?<![\d.])\d+\.\d+(?![\d.])\s?(?:%|млн|млрд|тис|разів|кг|км|грн|₴|\$|€)")),
     ("§35 розряди через кому", re.compile(r"(?<![\d,.])\d{1,3}(?:,\d{3})+(?!\d|,\d)")),
@@ -144,7 +145,7 @@ WARN_RX = [
     ("§35 «пів» через дефіс", re.compile(r"\bпів-[%s]" % (LOWER + UPPER))),
 ]
 VOCATIVE_OK = re.compile(r"(?:е|о|у|ю|є|ій|ю|і)$")  # Олександре, Олено, Андрію, Наталю
-DOTTED = re.compile(r"(?:^|[.!?]\s+)([%s]{3,8})\.\s+([%s]{3,8})\.\s+([%s]{3,8})\.(?=\s|$)" % (LOWER, LOWER, LOWER))
+DOTTED = re.compile(r"(?:^\s*|[.!?]\s+)([%s]{3,8})\.\s+([%s]{3,8})\.\s+([%s]{3,8})\.(?=\s|$)" % (LOWER, LOWER, LOWER))
 ABBR = {"тис", "млн", "млрд", "див", "напр", "прил", "изд", "вид", "ред", "упор", "інш", "стор", "табл",
         "рис", "мал", "акад", "проф", "доц", "канд", "грн", "обл", "род", "див", "ім", "вул", "буд"}
 FORMAL_OPEN = re.compile(r"^(?:У|В)\s+(?:сучасному світі|наш час|епоху|сучасних реаліях)|^(?:Сьогодні|Нині),\s+коли")
@@ -183,15 +184,26 @@ def strip_frontmatter(lines):
     return lines
 
 
+def blank(m):
+    return " " * len(m.group())
+
+
+def mask_line(line):
+    """Рядок тієї ж довжини: код, посилання й розмітка на початку замінені пробілами.
+
+    Позиції символів не зсуваються, тож збіги можна підсвітити в оригіналі.
+    Для таблиць повертає порожній рядок.
+    """
+    if line.strip().startswith("|"):
+        return ""
+    s = CODE.sub(blank, line)
+    s = URL.sub(blank, s)
+    return re.sub(r"^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)", blank, s)
+
+
 def prose_line(line):
     """Рядок без коду, посилань і розмітки на початку; порожній для коду й таблиць."""
-    s = line.strip()
-    if s.startswith("|"):
-        return ""
-    s = CODE.sub(" ", s)
-    s = URL.sub(" ", s)
-    s = re.sub(r"^(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)", "", s)
-    return s
+    return mask_line(line).strip()
 
 
 def blocks(lines):
@@ -232,13 +244,6 @@ def quote_spans(s):
     return [m.span() for m in QUOTE.finditer(s)]
 
 
-def downgrade_in_quote(level, line, rule, context, start, spans):
-    """Збіг усередині «лапок» — цитата чи назва: не правимо, тому лише WARN."""
-    if level == "ERROR" and any(a < start < b for a, b in spans):
-        return ("WARN", line, f"{rule} (у лапках — цитату й назву не правимо)", context)
-    return (level, line, rule, context)
-
-
 def lint(text):
     findings = []  # (рівень, рядок, правило, контекст)
     lines = strip_frontmatter(text.splitlines())
@@ -263,44 +268,99 @@ def lint(text):
             continue
 
         heading = raw.lstrip().startswith("#")
-        s = prose_line(raw)
-        if not s:
-            continue
-        low = s.lower()
-        quoted = quote_spans(s)
-        for rule, rx in ERRORS:
-            if heading and rule.startswith("§35"):
-                continue
-            for m in rx.finditer(s):
-                findings.append(downgrade_in_quote("ERROR", i, rule, ctx(s, m.start(), m.end()), m.start(), quoted))
-        for level, rule, rx in DICTIONARY:
-            for m in rx.finditer(s):
-                findings.append(downgrade_in_quote(level, i, rule, ctx(s, m.start(), m.end()), m.start(), quoted))
-        for rule, words in PHRASES:
-            for w in words:
-                pos = low.find(w)
-                if pos >= 0:
-                    findings.append(("WARN", i, f"{rule}: «{w}»", ctx(s, pos, pos + len(w))))
-        for rule, rx in WARN_RX:
-            for m in rx.finditer(s):
-                if rule.startswith("§9") and VOCATIVE_OK.search(m.group(1).split()[0]):
-                    continue
-                findings.append(("WARN", i, rule, ctx(s, m.start(), m.end())))
-        if re.search("[%s]" % EMOJI, s) and (heading or re.match(r"^\s*(?:[-*+]\s+)?[%s]" % EMOJI, raw.strip())):
-            findings.append(("WARN", i, "§33 емодзі в заголовку чи на початку пункту", s[:60]))
-        if heading:
-            words = [w for w in WORD.findall(s) if len(w) > 2]
-            if len(words) >= 3 and all(w[0].isupper() for w in words[1:]):
-                findings.append(("WARN", i, "§34 заголовок З Великих Літер", s[:70]))
-        caps = [w for w in re.findall(r"\b[%s]{6,}\b" % UPPER, s)]
-        if caps and not heading:
-            findings.append(("WARN", i, "§13 слово ВЕЛИКИМИ", ", ".join(caps[:3])))
-        for m in DOTTED.finditer(s):
-            if not set(m.groups()) & ABBR:
-                findings.append(("WARN", i, "§13 слова. через. крапку.", m.group().strip()))
+        s = mask_line(raw)
+        for level, rule, a, b in scan_line(s, heading):
+            findings.append((level, i, rule, ctx(s, a, b)))
 
     findings += structure(lines, code_free)
     return findings
+
+
+def trim_start(s, a, b):
+    """Зсуває початок збігу з якоря «. » на перше слово, щоб підсвітка була точною."""
+    while a < b and (s[a].isspace() or s[a] in ".!?"):
+        a += 1
+    return a
+
+
+def scan_line(s, heading=False):
+    """Усі збіги в одному рядку чи абзаці: [(рівень, правило, початок, кінець)].
+
+    Рядок має бути замаскований (mask_line) або бути чистим текстом абзацу.
+    """
+    out = []
+    if not s.strip():
+        return out
+    low = s.lower()
+    quoted = quote_spans(s)
+
+    def add(level, rule, a, b):
+        a = trim_start(s, a, b)
+        while b < len(s) and (s[b].isalpha() or s[b] in APOS + "-") and b > 0 and s[b - 1].isalpha():
+            b += 1  # «ключов» → «ключовим»: підсвічуємо слово до кінця
+        if level == "ERROR" and any(qa < a < qb for qa, qb in quoted):
+            level, rule = "WARN", f"{rule} (у лапках — цитату й назву не правимо)"
+        out.append((level, rule, a, b))
+
+    for rule, rx in ERRORS:
+        if heading and rule.startswith("§35"):
+            continue
+        for m in rx.finditer(s):
+            add("ERROR", rule, m.start(), m.end())
+    for level, rule, rx in DICTIONARY:
+        for m in rx.finditer(s):
+            add(level, rule, m.start(), m.end())
+    for rule, words in PHRASES:
+        for w in words:
+            pos = low.find(w)
+            while pos >= 0:
+                add("WARN", f"{rule}: «{w}»", pos, pos + len(w))
+                pos = low.find(w, pos + len(w))
+    for rule, rx in WARN_RX:
+        for m in rx.finditer(s):
+            if rule.startswith("§9") and VOCATIVE_OK.search(m.group(1).split()[0]):
+                continue
+            add("WARN", rule, m.start(), m.end())
+    emoji = re.search("[%s]" % EMOJI, s)
+    if emoji and (heading or re.match(r"^\s*(?:[-*+]\s+)?[%s]" % EMOJI, s)):
+        add("WARN", "§33 емодзі в заголовку чи на початку пункту", emoji.start(), emoji.end())
+    if heading:
+        words = [w for w in WORD.findall(s) if len(w) > 2]
+        if len(words) >= 3 and all(w[0].isupper() for w in words[1:]):
+            first = len(s) - len(s.lstrip())
+            add("WARN", "§34 заголовок З Великих Літер", first, len(s.rstrip()))
+    letters = [c for c in s if c.isalpha()]
+    all_caps = letters and sum(c.isupper() for c in letters) / len(letters) > 0.8
+    if not heading and not all_caps:  # рядок цілком великими — оформлення заголовка, не прийом
+        for m in re.finditer(r"\b[%s]{6,}\b" % UPPER, s):
+            add("WARN", "§13 слово ВЕЛИКИМИ", m.start(), m.end())
+    for m in DOTTED.finditer(s):
+        if not set(m.groups()) & ABBR:
+            add("WARN", "§13 слова. через. крапку.", m.start(), m.end())
+    return out
+
+
+def lint_paragraphs(paragraphs):
+    """Аналіз абзаців документа для застосунку.
+
+    paragraphs: [{"id", "text", "heading"?}] — як у docx_tool.extract.
+    Повертає {"spans": {id: [...]}, "document": [...]} — збіги з позиціями в
+    тексті кожного абзацу і висновки про документ загалом (ритм, тріади, тире).
+    """
+    spans, lines = {}, []
+    for p in paragraphs:
+        text = p["text"]
+        found = scan_line(text, bool(p.get("heading")))
+        for rule, rx in ARTIFACTS:
+            for m in rx.finditer(text):
+                found.append(("ERROR", rule, m.start(), m.end()))
+        spans[p["id"]] = [{"level": lv, "rule": r, "start": a, "end": b} for lv, r, a, b in found]
+        prefix = "# " if p.get("heading") else ("- " if p.get("list") else "")
+        lines += [prefix + text.replace("\n", " "), ""]
+    text = "\n".join(lines)
+    document = [{"level": lv, "rule": r, "context": c}
+                for lv, _, r, c in structure(lines, CODE.sub(" ", text))]
+    return {"spans": spans, "document": document}
 
 
 def structure(lines, code_free):
@@ -506,6 +566,8 @@ def self_test():
     fm = "---\nname: x\n---\n\nТекст."
     assert not rules(fm), rules(fm)
 
+    assert not rules("МІНІСТЕРСТВО ОСВІТИ І НАУКИ УКРАЇНИ", "WARN"), "титульний рядок великими"
+    assert any("ВЕЛИКИМИ" in r for r in rules("Це працює КОЖНОГО дня без винятків.", "WARN"))
     head = "# Як Почати Роботу З Платформою\n\nТекст."
     assert any(r.startswith("§34") for r in rules(head, "WARN"))
 

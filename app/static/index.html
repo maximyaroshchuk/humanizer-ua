@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>humanizer-ua</title>
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='3' width='20' height='26' rx='2' fill='%23fff' stroke='%231b2430' stroke-width='2'/%3E%3Cpath d='M10 11h12M10 16h8M10 21h10' stroke='%231b2430' stroke-width='2'/%3E%3Cpath d='M9 16q6 4 14 0' stroke='%23c8102e' stroke-width='2.4' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="6" y="3" width="20" height="26" rx="2"/><path class="lines" d="M10 11h12M10 16h8M10 21h10"/><path class="stroke" d="M9 16q6 4 14 0"/></svg>
+    <span class="brand-name">humanizer-ua</span>
+    <span class="brand-sub">коректура тексту після ШІ</span>
+  </div>
+  <div id="claude" class="claude" title="Глибока перевірка й правка працюють через ваш локальний claude CLI">Перевіряю claude…</div>
+</header>
+
+<main id="desk" class="desk">
+  <section class="sheet-wrap">
+    <nav id="tabs" class="tabs" hidden>
+      <button data-view="marks" class="on">Коректура</button>
+      <button data-view="diff" disabled>Правки</button>
+      <button data-view="clean" disabled>Чистовик</button>
+    </nav>
+    <article id="sheet" class="sheet">
+      <label id="drop" class="drop">
+        <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h14l10 10v26H14z"/><path d="M28 6v10h10"/><path d="M26 36V22m-6 6 6-6 6 6"/></svg>
+        <strong>Покладіть сюди документ Word</strong>
+        <span>Перетягніть файл .docx на аркуш або натисніть, щоб вибрати.</span>
+        <small>Аналіз іде на вашому комп’ютері. Для глибокої перевірки й правки текст надсилається в Claude через ваш claude CLI.</small>
+      </label>
+    </article>
+  </section>
+
+  <aside id="side" class="side" hidden>
+    <section class="card file">
+      <div class="file-name" id="fileName"></div>
+      <div class="file-meta" id="fileMeta"></div>
+      <button class="link" id="another">Відкрити інший файл</button>
+    </section>
+
+    <section class="card verdict" id="verdict"></section>
+
+    <section class="card">
+      <h2>Що позначено</h2>
+      <div class="legend">
+        <span><mark class="err">помилка</mark> жорстка заборона чи порушення норми</span>
+        <span><mark class="warn">попередження</mark> ознака, вагома лише в скупченні</span>
+        <span><mark class="ai">ШІ</mark> фраза, що найбільше видає ШІ, на думку Claude</span>
+        <span><span class="swatch-ai"></span> абзац, який Claude вважає згенерованим (після «Перевірити глибше»)</span>
+      </div>
+      <label class="check"><input type="checkbox" id="showWarn" checked> Показувати попередження</label>
+      <ul class="families" id="families"></ul>
+      <div id="docNotes"></div>
+    </section>
+
+    <section class="card actions">
+      <h2>Claude</h2>
+      <label class="field">Тип тексту
+        <select id="genre">
+          <option value="general">Загальний: стаття, пост, опис</option>
+          <option value="academic">Науковий: курсова, реферат</option>
+          <option value="marketing">Маркетинг і соцмережі</option>
+          <option value="business">Діловий лист</option>
+        </select>
+      </label>
+      <label class="field">Модель
+        <select id="model">
+          <option value="">Типова з claude CLI</option>
+          <option value="opus">Opus — найякісніше</option>
+          <option value="sonnet">Sonnet — швидше</option>
+          <option value="haiku">Haiku — найшвидше</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="onlyFlagged"> Правити лише позначені абзаци</label>
+      <div class="buttons">
+        <button class="secondary" id="detectBtn">Перевірити глибше</button>
+        <button class="primary" id="rewriteBtn">Виправити текст</button>
+      </div>
+      <div class="progress" id="progress" hidden>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="progress-row"><span id="progressText"></span><button class="link" id="cancelBtn">Скасувати</button></div>
+        <ol class="log" id="log"></ol>
+      </div>
+    </section>
+
+    <section class="card result" id="result" hidden></section>
+  </aside>
+</main>
+
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

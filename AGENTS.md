@@ -18,6 +18,7 @@ humanizer-ua — скіл для агентів, написаний у Markdown,
 - `scripts/lint.py` — лінтер (.docx, .md, stdin).
 - `scripts/docx_tool.py` — читання й правка .docx: extract, text, apply, demo.
 - `scripts/package_skill.py` — zip для claude.ai.
+- `app/server.py`, `app/static/` — локальний вебзастосунок: сервер на stdlib викликає `claude -p` і `docx_tool`, фронтенд без збирання. Після змін сервера чи фронтенду прожени весь цикл у браузері: завантаження, «Перевірити глибше», «Виправити текст», завантаження обох файлів.
 - `scripts/validate-package.py` — перевірка пакета.
 - `evals/evals.json` — сценарії перевірки.
 - `.claude-plugin/` — маніфести плагіна Claude.
