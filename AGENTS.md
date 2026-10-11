@@ -1,54 +1,53 @@
-# Guide for agents
+# Інструкція для агентів
 
-This file explains how to change Humanizer without breaking its package or prompt.
+Як змінювати humanizer-ua, не зламавши пакет і промпт.
 
-## What this repo contains
+## Що в репо
 
-Humanizer is an agent skill written in Markdown. `SKILL.md` is the prompt that agents read. The repo has no build step.
+humanizer-ua — скіл для агентів, написаний у Markdown, плюс два скрипти на чистому Python. Збирати нічого не треба.
 
-Keep the skill portable. Do not write instructions that limit it to one or two agent tools.
+Скіл має лишатися переносним. Не пиши інструкцій, які прив’язують його до одного агента.
 
-## Key files
+## Ключові файли
 
-- `SKILL.md` is the source of truth and the repo's only skill file. It contains portable YAML metadata, an account of why AI text sounds the way it does, and numbered patterns grouped in six sections and ordered by strength and frequency.
-- `README.md` explains installation, use, and patterns.
-- `CHANGELOG.md` holds the release notes, newest first. Old notes keep the pattern numbers their release used.
-- `.claude-plugin/plugin.json` describes the Claude plugin and points its skill loader at the root `SKILL.md`.
-- `.claude-plugin/marketplace.json` lets users add this repo as a Claude marketplace.
-- `.cursor-plugin/plugin.json` describes the Cursor plugin. Omit a `skills` path so Cursor loads the root `SKILL.md`.
-- `agents/openai.yaml` holds the display name, short description, and default prompt for OpenAI-compatible agents.
-- `scripts/validate-package.py` checks package files and shared values.
+- `SKILL.md` — промпт, який агент читає щоразу. Фази роботи, docx-процес, режим перевірки, заборони, карта патернів, голос.
+- `references/patterns.md` — 42 патерни з маркерами, причиною, лікуванням і прикладами. Агент читає його у фазі 1.
+- `references/surzhyk.md` — словник русизмів і кальок. Це водночас дані лінтера: кожен рядок має формат `- **…** → … · ERROR|WARN · §N · \`regex\``.
+- `references/typography.md` — норма пунктуації й типографіки за правописом 2019 року.
+- `knowledge/corrections.md` — журнал правил від власника скіла. Лише дописуємо.
+- `scripts/lint.py` — лінтер (.docx, .md, stdin).
+- `scripts/docx_tool.py` — читання й правка .docx: extract, text, apply, demo.
+- `scripts/package_skill.py` — zip для claude.ai.
+- `scripts/validate-package.py` — перевірка пакета.
+- `evals/evals.json` — сценарії перевірки.
+- `.claude-plugin/` — маніфести плагіна Claude.
 
-## Rules for changes
+## Правила змін
 
-Keep `SKILL.md` and `README.md` in sync.
+- Патерни нумеруються з 1 без пропусків, сильніші й частіші — першими. Новий патерн додавай, лише якщо жоден наявний його не покриває; краще розшир наявний. Додав, прибрав чи перенумерував — онови карту в `SKILL.md`, таблицю в `README.md`, кількість у заголовку `patterns.md` і всі посилання `§N` (зокрема в `lint.py` і `surzhyk.md`).
+- Посилання на правопис пиши словами («правопис, параграф 161»), а не через `§`: знак `§` зарезервовано для номерів патернів, і валідатор їх перевіряє.
+- Словник. Новий зворот — новий рядок у `surzhyk.md` у точному форматі. `ERROR` — лише для однозначних порушень норми. Якщо слово має й нормативне значення (*вірно, рахувати, задача*), став `WARN`. Перевір регулярний вираз на хибні збіги: дієприслівники (*працюючи*), слова з апострофом (*з’являється*), похідні (*заказник*).
+- Лінтер. Нова перевірка — новий рядок у самоперевірці (`--self-test`): і текст, який має спрацювати, і схожий нормальний текст, який не має. Після змін прожени лінтер на великому людському тексті (наприклад, статтях української Вікіпедії): вердикт має лишатися «чисто».
+- docx. Будь-яка зміна `docx_tool.py` — прогін `--self-test` і ручна перевірка: створи зразок командою `demo`, застосуй правки командою `apply` і відкрий обидва файли (Word, LibreOffice або `textutil -convert txt` на macOS).
+- Версія однакова в `SKILL.md` (`metadata.version`), першому заголовку `CHANGELOG.md` і `.claude-plugin/plugin.json`.
+- Опис у маніфестах — перше речення `description` зі `SKILL.md`.
+- Обсяг. `SKILL.md` читається щоразу повністю, валідатор обмежує його 4500 словами. Деталі — у `references/`.
+- Історія. Будь-яка зміна поведінки — короткий запис у `CHANGELOG.md`.
+- Перевірки перед публікацією:
 
-- **Patterns:** Patterns are numbered from 1 without gaps, strongest and most frequent first. A new tell earns a pattern only when no existing pattern already implies it; prefer folding it into an existing pattern. If you add, remove, or renumber a pattern, update the README tables, the README section title, and every §reference. The validator derives the count from the headings and checks that README pattern names match them.
-- **Version:** Keep the same version in `SKILL.md` under `metadata.version`, the first `CHANGELOG.md` heading, `.claude-plugin/plugin.json`, and `.cursor-plugin/plugin.json`. Do not add a top-level `version` field to the skill.
-- **Compatibility:** Keep install and use instructions neutral across agents. Names such as Claude Code, Cursor, OpenCode, and Codex are examples, not limits.
-- **Description:** The plugin manifests use the first sentence of the `SKILL.md` description.
-- **Length:** Every word of `SKILL.md` is read on each use. The validator caps it at 5,500 words; a change that adds words should earn them.
-- **History:** Add a short `CHANGELOG.md` note for any behavior change or non-obvious fix.
-- **Checks:** Before publishing, run `python3 scripts/validate-package.py`, `npx skills add . --list`, and `claude plugin validate .`.
+  ```bash
+  python3 scripts/validate-package.py
+  python3 scripts/lint.py --self-test
+  python3 scripts/docx_tool.py --self-test
+  npx skills add . --list
+  claude plugin validate .
+  ```
 
-## Writing style
+## Стиль
 
-Use Plain Language in code comments, prompts, documentation, descriptions, validation messages, and progress reports.
+Документація, промпти, коментарі й повідомлення скриптів — українською, простою мовою. І головне: **цей репо сам має проходити свій скіл.** Без «не просто X, а Y», без «відіграє ключову роль», без звітів про те, як ми старанно працювали. README і CHANGELOG описують, що змінилося для читача.
 
-- Lead with the main point.
-- Use common words and active voice.
-- Keep sentences and paragraphs short.
-- Use one term for the same item.
-- Use `must` for requirements.
-- Use headings, lists, and tables when they help the reader.
-- Remove repeated or unnecessary words.
-- Limit acronyms and explain technical terms.
-- Avoid double negatives.
-- Keep exact identifiers, commands, paths, schema fields, quotations, watched phrases, and behavior-bearing examples.
-- Keep the full technical meaning.
-
-## Editing the skill
-
-- Keep the YAML metadata valid.
-- Treat the prompt below the metadata as the product.
-- Prefer a short, clear instruction over another exception or repeated explanation.
+- Головне — на початку.
+- Звичайні слова, активний стан, короткі речення.
+- Один термін для одного поняття.
+- Точні ідентифікатори, команди, шляхи й приклади залишай як є.

@@ -1,206 +1,296 @@
-# Humanizer
+<div align="center">
 
-[![GitHub stars](https://img.shields.io/github/stars/blader/humanizer?style=flat)](https://github.com/blader/humanizer/stargazers) [![skills.sh installs](https://skills.sh/b/blader/humanizer)](https://skills.sh/blader/humanizer)
+# humanizer-ua
 
-Humanizer makes AI-written text sound like a person wrote it, without changing what it says. It is built on Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing), the guide Wikipedia editors use to catch AI-generated text, and it works in Claude Code, Codex, and any other agent that supports skills.
+### Олюднювач тексту українською: прибирає ознаки ШІ, канцелярит, русизми й кальки
 
-**Before:**
-> I'm thrilled to announce that shared drafts are finally here! 🚀 For months, our own team was drowning in files named final_v7.docx — and we knew there had to be a better way. Now two people can edit the same doc at once, with every change appearing live for both of them. It's not just a feature; it's a whole new way to collaborate. Comments stay anchored to the exact sentence they reference, even as the text around them evolves. And the best part? It's available today on every plan, completely free. Let that sink in.
+[![Ліцензія MIT](https://img.shields.io/badge/ліцензія-MIT-blue.svg)](LICENSE)
+[![Версія](https://img.shields.io/badge/версія-1.0.0-green.svg)](CHANGELOG.md)
+[![Мова](https://img.shields.io/badge/мова-українська-ffd500.svg)](#)
+[![Word](https://img.shields.io/badge/Word-.docx-2b579a.svg)](#робота-з-word-docx)
+[![Патерни](https://img.shields.io/badge/патерни-42-orange.svg)](#42-патерни)
 
-**After:**
-> Shared drafts are out today. For months our own team passed around files named final_v7.docx, so we built a way for two people to edit the same doc at once, with each person's changes showing up live for the other. Comments stay pinned to the sentence they're about, even when the text around them changes. It's free on every plan.
+**Скіл для ШІ-агентів, що перетворює текст після ChatGPT, Claude чи Gemini на текст живої людини.**<br>
+Факти, цифри й заклики до дії зберігає. Нічого не вигадує. Працює з Word: повертає файл у режимі рецензування.
 
-In a blind test, judges preferred Humanizer's rewrite over the original AI text 16 times out of 16 ([#229](https://github.com/blader/humanizer/issues/229)).
+[Встановлення](#встановлення) · [Як користуватися](#як-користуватися) · [Word](#робота-з-word-docx) · [Патерни](#42-патерни) · [Питання](#часті-питання)
 
-Humanizer edits for human readers. Getting past AI detectors is not a goal, and detectors still flag most of its output.
+</div>
 
-## The five strongest tells
+---
 
-These are the most common signs of AI writing, and Humanizer rewrites any of them on sight:
+Текст, написаний нейромережею, легко впізнати: *«не просто X, а Y»*, *«відіграє ключову роль»*, *«у сучасному світі»*, тріади, тире в кожному реченні, *«Сподіваюся, це допоможе!»*. Українською до цього додаються мовні сліди: модель думає англійською чи російською і перекладає. Звідси *являється*, *приймати участь*, *існуючий*, *грає роль*, *Шановний Олександр* без кличного відмінка.
 
-1. **Not X but Y:** "It's not just a feature, it's a shift."
-2. **One-line closers:** "Let that sink in."
-3. **Sayings that sound deep:** "At its core, what really matters is..."
-4. **A staged run-up:** "Here's the thing." "Honestly?"
-5. **Arguing with no one:** "I'm not saying X, but..."
+**humanizer-ua** знаходить ці ознаки за довідником із 42 патернів, виправляє лише знайдене і перевіряє результат лінтером. Чистий текст повертає без змін.
 
-Humanizer checks for [26 patterns](#the-26-patterns) in all.
+Підходить для постів у соцмережах, статей, розсилок, лендингів, листів, описів товарів, документації та будь-якого тексту, який треба **очистити від ознак ШІ**, **переписати людською мовою** або **перевірити: чи писав це ChatGPT?**
 
-## Installation
+## Було → стало
 
-Once installed, the skill answers to `/humanizer`.
+| Було | Стало |
+|------|-------|
+| Ми здійснюємо проведення заходів з метою підвищення ефективності. | Ми працюємо швидше. |
+| Даний проект являється ключовим для компанії. | Для компанії це головний проєкт. |
+| Рішення було прийнято керівництвом. | Керівництво вирішило. |
+| Це не просто застосунок, а справжній другий мозок. | У застосунку нотатки пов’язуються між собою за темами. |
+| Функція грає ключову роль, щоб адресувати проблему затримок. | Функція прибирає затримки. |
+| Шановний Олександр, дякуємо за Ваше звернення! | Шановний Олександре, дякуємо за звернення! |
+| Швидкість > ідеальності. Ідея → прототип → продукт. | Швидкість важливіша за ідеальність. Спершу ідея, потім прототип, потім продукт. |
+| Ціна - $1,500. Знижка 7.5% до 5-ого числа. | Ціна — 1 500 доларів. Знижка 7,5 % до 5-го числа. |
 
-### Claude Code
+## Що вміє
+
+- **Редагує текст** у три фази: аудит без правок, точкова правка лише знайденого, перевірка лінтером. Повторна правка доброго тексту його псує, тому чистий текст лишається як є.
+- **Працює з Word (.docx).** Повертає два файли: з режимом рецензування, де кожну правку можна прийняти чи відхилити, і чистовий. Форматування, таблиці й гіперпосилання зберігаються.
+- **Перевіряє, чи писав ШІ** — без правок. Повертає список доказів із цитатами й номерами патернів і вердикт. Ловить сліди копіювання з чат-ботів (`oaicite`, `utm_source=chatgpt.com`, `[cite: 3]`) і тексти, «олюднені» іншим інструментом.
+- **Знає українську норму.** Словник із понад 100 русизмів, суржику й англійських кальок з відповідниками за Антоненком-Давидовичем, Пономарьовим і Караванським. Типографіка за «Українським правописом» 2019 року.
+- **Не ламає норму.** Тире між підметом і присудком (*Кит — ссавець*) у правописі обов’язкове, тож скіл його не прибирає. Прибирає лише тире як універсальну зв’язку.
+- **Не вигадує фактів.** Замість штампа *«вражаючі результати»* не з’явиться вигадане *«на 47 % більше»*. Бракує цифри — скіл попросить її в резюме.
+
+## Встановлення
+
+Скіл працює в будь-якому агенті, що читає `SKILL.md`: Claude Code, Claude.ai, Codex, Cursor, OpenCode, Gemini CLI тощо.
+
+**Через [skills.sh](https://skills.sh)** — для більшості агентів:
+
+```bash
+npx skills add maximyaroshchuk/humanizer-ua        # спитає, куди ставити
+npx skills add maximyaroshchuk/humanizer-ua -g     # глобально, для всіх проєктів
+```
+
+**Claude Code — як плагін:**
+
+```
+/plugin marketplace add maximyaroshchuk/humanizer-ua
+/plugin install humanizer-ua@humanizer-ua
+```
+
+**Claude Code — вручну:**
+
+```bash
+git clone https://github.com/maximyaroshchuk/humanizer-ua.git ~/.claude/skills/humanizer-ua
+```
+
+**Claude.ai (сайт і застосунок):**
+
+```bash
+git clone https://github.com/maximyaroshchuk/humanizer-ua.git && cd humanizer-ua
+python3 scripts/package_skill.py        # створить dist/humanizer-ua.zip
+```
+
+Далі в Claude.ai: **Settings → Capabilities → Skills → Upload skill** і вибрати `dist/humanizer-ua.zip`. Для роботи з .docx увімкни виконання коду (Code execution).
+
+## Як користуватися
+
+Досить попросити агента звичайними словами:
+
+> Олюдни цей текст: …
+>
+> Прибери воду й ознаки ШІ з поста.
+>
+> Перепиши людською мовою, звучить як ChatGPT.
+>
+> Відредагуй файл звіт.docx.
+>
+> Перевір, чи палиться цей текст на ШІ, але не правь.
+
+Або явно викликати скіл: `/humanizer-ua` і далі текст.
+
+Для вставленого тексту відповідь складається з чистовика і короткого резюме змін після розділювача `---`.
+
+## Робота з Word (.docx)
+
+Дай агентові шлях до файлу. Поруч з оригіналом з’являться два нові файли:
+
+| Файл | Що всередині |
+|------|--------------|
+| `звіт.рецензія.docx` | Режим рецензування Word: видалене закреслено, додане підкреслено, автор правок — `humanizer-ua`. **Рецензування → Прийняти** або **Відхилити** — по одній правці чи всі разом. |
+| `звіт.чистовик.docx` | Ті самі правки, вже прийняті. Можна одразу надсилати. |
+
+Оригінал не змінюється. Жирний, курсив, стилі, таблиці, колонтитули й виноски зберігаються. Гіперпосилання, поля й зображення захищені: якщо правка мала б їх зачепити, абзац потрапить у звіт як «правте вручну».
+
+Скрипти можна запускати й без агента (потрібен лише Python 3.8+, без залежностей):
+
+```bash
+python3 scripts/docx_tool.py extract звіт.docx > абзаци.json     # абзаци з id
+python3 scripts/docx_tool.py apply звіт.docx правки.json         # рецензія + чистовик
+python3 scripts/lint.py звіт.чистовик.docx                       # перевірка
+python3 scripts/docx_tool.py demo приклад.docx                   # зразок із ШІ-ознаками
+```
+
+Формат `правки.json`: `[{"id": "3", "new": "Новий текст абзацу."}]`. Порожній `new` видаляє абзац.
+
+## Лінтер
+
+`scripts/lint.py` перевіряє `.docx`, `.md`, `.txt` або текст зі stdin.
+
+- **ERROR** — порушення норми чи жорстка заборона: *являється*, *не просто X, а Y*, *Кит - ссавець* (дефіс замість тире), *→* у прозі, артефакти копіпасту. Код виходу 1.
+- **WARN** — маркери патернів, які оцінюють скупченнями: одне *«ключовий»* нічого не доводить.
+- **Вердикт** рахується на 300 слів: «чисто», «переглянути» або «переписати».
 
 ```text
-/plugin marketplace add blader/humanizer
-/plugin install humanizer@humanizer
+ERROR  L3     §12 не просто X, а Y  ←  Наша платформа — це не просто сервіс, а справжній партнер…
+ERROR  L5     §1 являється, являються → є; або тире чи дієслово  ←  …автоматизація являється ключовим…
+ERROR  L5     §3 існуючий → наявний, чинний, той, що є  ←  …Існуючі рішення не забезпечують…
+WARN   L7     §20 двокрапка-підводка  ←  Результат: витрати скорочуються на 30 %…
+
+ERROR: 5  WARN: 8  слів: 77  бал на 300 слів: 23.0  вердикт: переписати
 ```
 
-The plugin answers to `/humanizer:humanizer`. It needs Claude Code 2.1.142 or newer; on older versions, use `npx skills add blader/humanizer --global --agent claude-code`.
+На статтях української Вікіпедії (понад 40 тисяч слів людського тексту) лінтер дає вердикт «чисто».
 
-### Codex
+## 42 патерни
+
+Повні описи з прикладами «було / стало» — у [references/patterns.md](references/patterns.md). Словник русизмів і кальок — у [references/surzhyk.md](references/surzhyk.md), типографіка — у [references/typography.md](references/typography.md).
+
+### A. Мовна норма
+
+Найсильніший сигнал саме для української: модель думає іншою мовою і перекладає.
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 1 | Русизми та суржик | *являється, приймати участь, на протязі, слідуючий* |
+| 2 | Англійські кальки | *грає ключову роль, адресувати проблему, на щоденній основі* |
+| 3 | Дієприкметники на -учий, -ючий | *існуючий, оточуючі, бажаючі, вражаючий* |
+| 4 | Пасив з орудним відмінком і безособові «було прийнято» | *рішення приймається керівництвом* |
+| 5 | Прийменникові кальки | *по питанню, при умові, в якості, згідно наказу* |
+| 6 | Віддієслівні іменники замість дієслів (канцелярит) | *здійснювати контроль, з метою покращення* |
+| 7 | «Являє собою» замість «є» або тире | *являє собою, виступає в ролі, є ключовим* |
+| 8 | Нанизування родового відмінка | *підвищення рівня якості надання послуг* |
+| 9 | Звертання в називному відмінку | *Шановний Олександр, Привіт, Андрій* |
+| 10 | «Ви» з великої літери в масовому тексті | *підготували для Вас* у розсилці |
+| 11 | Англіцизми й техножаргон без потреби | *дедлайн, фідбек, імплементувати, інсайт* |
+
+### B. Інсценізація замість твердження
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 12 | Не просто X, а Y [ЗАБОРОНА] | *це не просто сервіс, а справжній партнер* |
+| 13 | Фінальні рядки-кікери та драматичні паузи | *І це змінює все.* |
+| 14 | Псевдоглибина й формули афоризмів | *по суті; увага — нова валюта* |
+| 15 | Анонси замість справи | *давайте розберемося; важливо зазначити* |
+| 16 | Фальшива довірливість | *Чесно? Ось у чому річ.* |
+| 17 | Риторичні запитання і суперечка з вигаданим опонентом | *Чому це важливо? Бо…* |
+
+### C. Ритм за правилом
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 18 | Тріади | *швидко, надійно та ефективно* |
+| 19 | Тире як універсальна зв’язка | тире в кожному реченні, де правопис його не вимагає |
+| 20 | Двокрапка-підводка | *Найцікавіше: …* |
+| 21 | Рублені фрагменти поспіль [ЗАБОРОНА] | *Без коду. Без налаштувань. Лише результат.* |
+| 22 | Повтор дієслова в сусідніх реченнях | *Тариф пропонує… Другий тариф пропонує…* |
+| 23 | Однакові початки речень | *Ми… Ми… Ми…* |
+| 24 | Абзаци й списки під копірку | усі списки по три пункти «**мітка:** пояснення» |
+
+### D. Роздування
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 25 | Словник ШІ | *ключовий, сприяє, невід’ємна частина, у сучасному світі* |
+| 26 | Роздута значущість | *знаменує новий етап* |
+| 27 | Дієприслівникові хвости | *…, підкреслюючи важливість сталого розвитку* |
+| 28 | Рекламна мова | *неперевершений, у самому серці Карпат* |
+| 29 | Розмиті посилання на авторитет | *експерти вважають, дослідження показують* |
+| 30 | «Виклики та перспективи» | *попри низку викликів, галузь має перспективи* |
+| 31 | Каскад обережностей | *можливо, певною мірою потенційно* |
+| 32 | Загальнопозитивні фінали та «Підсумовуючи» | *Майбутнє виглядає світлим!* |
+
+### E. Форматування й типографіка
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 33 | Жирний, емодзі й лінії як декор | 🚀 **Крок 1:** |
+| 34 | Заголовки З Великої Літери Кожного Слова | *Як Почати Роботу З Платформою* |
+| 35 | Чужа типографіка: "лапки", прямий апостроф, дефіс замість тире | *"Умови", п'ять, Кит - ссавець, $100, 7.5%* |
+| 36 | Математичні й кодові знаки в прозі [ЗАБОРОНА] | *менше нарад = більше результату → щасливіша команда* |
+
+### F. Залишки чату й чернетки
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 37 | Залишки чат-бота | *Звісно! Ось ваш текст: … Сподіваюся, це допоможе!* |
+| 38 | Заголовок, переказаний першим реченням | *Як вибрати ноутбук → Вибір ноутбука — важливе рішення* |
+| 39 | Вигадані деталі для заповнення прогалин | *ймовірно, захопилася дизайном ще в дитинстві* |
+
+### G. Хибний читач і структура
+
+| № | Патерн | Приклад |
+|---|--------|---------|
+| 40 | Псевдотерапевтичний регістр | *І це абсолютно нормально! Ви не самотні.* |
+| 41 | Повторне пояснення відомого | *Як ви знаєте, ми плануємо реліз…* |
+| 42 | Машинний скелет тексту | перші речення абзаців складаються в готовий конспект |
+
+## Чим відрізняється від інших олюднювачів
+
+- **Своє, а не переклад.** Патерни, словник і приклади написано для української з нуля. Від [humanizer](https://github.com/blader/humanizer) узято основу, від [humanizer-ru](https://github.com/smixs/humanizer-ru) — ідею трьох фаз і лінтера.
+- **Мовна норма — окрема група патернів.** Русизми, кальки, дієприкметники на -учий, звертання без кличного відмінка, «Ви» з великої. Цього немає в англійських і російських версіях.
+- **Тире не забороняє.** У російській версії довге тире заборонене повністю. В українській воно нормативне, тому заборонено лише тире-зв’язку.
+- **Word з рецензуванням.** Правки видно і їх можна прийняти по одній, як від живого редактора.
+
+## Часті питання
+
+**Як прибрати ознаки ШІ з тексту українською?**
+Встанови скіл і попроси агента: «Олюдни цей текст» або «Прибери ознаки ШІ». Скіл знайде патерни, виправить їх і перевірить лінтером.
+
+**Як зробити текст після ChatGPT людським?**
+Те саме: встав текст або дай файл .docx. Скіл прибере штампи (*відіграє ключову роль*, *не просто X, а Y*), кальки й канцелярит, а факти залишить.
+
+**Чи допоможе це обійти детектори ШІ?**
+Мета інша: текст має читатися як написаний людиною для людини. Детектори вгадують і помиляються, тому скіл на них не орієнтується. Натомість режим перевірки показує конкретні ознаки з цитатами, які кожен може перевірити сам.
+
+**Як перевірити, чи текст написав ШІ?**
+Попроси: «Перевір, чи це писав ШІ, але не правь». Отримаєш таблицю доказів і вердикт: людина, імовірно ШІ, майже напевно ШІ або «оброблено іншим олюднювачем».
+
+**Чи можна редагувати документ Word (.docx)?**
+Так, це основний сценарій. Отримаєш файл із рецензуванням (кожну правку можна прийняти чи відхилити) і чистовий файл.
+
+**Чи виправляє скіл орфографію?**
+Скіл виправляє русизми, кальки, звертання й типографіку, бо це водночас ознаки ШІ. Повної перевірки правопису він не замінює.
+
+**Чи підходить для юридичних і наукових текстів?**
+Ні. Там канцелярит і пасив — норма жанру, і скіл їх не бере.
+
+**Чи працює з російським чи англійським текстом?**
+Ні, лише з українським. Для російського є [humanizer-ru](https://github.com/smixs/humanizer-ru), для англійського — [humanizer](https://github.com/blader/humanizer).
+
+**Чи можна навчити скіл моїм правилам?**
+Так. Допиши правило в [knowledge/corrections.md](knowledge/corrections.md). Скіл читає цей файл перед кожною правкою, і твої правила мають перевагу над типовими.
+
+## Як це перевіряється
 
 ```bash
-npx skills add blader/humanizer --global --agent codex
+python3 scripts/validate-package.py      # структура пакета, нумерація патернів, словник
+python3 scripts/lint.py --self-test      # лінтер: заборони, словник, docx
+python3 scripts/docx_tool.py --self-test # Word: рецензія, чистовик, захищені фрагменти
 ```
 
-### Claude.ai and Claude Desktop
+[evals/evals.json](evals/evals.json) містить 20 сценаріїв: пости, листи, лендинги, docx, режим перевірки, пастки з нормативним тире, цитатами й вигаданими фактами.
 
-Download this repository as a ZIP (**Code → Download ZIP**) and upload it as a skill in Settings.
+## Джерела
 
-### Other agents
+- [humanizer](https://github.com/blader/humanizer) від [@blader](https://github.com/blader) — основа: пояснення, чому ШІ пише саме так, принцип «не вигадувати фактів».
+- [humanizer-ru](https://github.com/smixs/humanizer-ru) від [@smixs](https://github.com/smixs) — ідея трьох фаз, лінтера і заборонених замін.
+- [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+- «Український правопис» (2019): параграфи 160 (двокрапка), 161 (тире), 164 (лапки), 168 (рубрикація), 60 (форми ввічливості), 62 (скорочення).
+- Борис Антоненко-Давидович, «Як ми говоримо».
+- Олександр Пономарів, «Культура слова: мовностилістичні поради».
+- Святослав Караванський, «Пошук українського слова, або Боротьба за національне «я»».
 
-```bash
-npx skills add blader/humanizer --global --agent '*'
-```
+## Ліцензія
 
-This installs Humanizer for every agent the Skills CLI supports, including Gemini CLI, GitHub Copilot, and Windsurf. Leave off `--global` in any command above to install it only in the current project. For an agent the Skills CLI does not know, copy `SKILL.md` into its skill folder.
+[MIT](LICENSE). © 2026 Maksym Yaroshchuk (humanizer-ua). © 2025 Siqi Chen (оригінальний humanizer).
 
-## Usage
+---
 
-Call the skill directly:
+<details>
+<summary><b>English</b></summary>
 
-```
-/humanizer
+**humanizer-ua** is an agent skill that removes signs of AI writing from **Ukrainian** text: stock AI phrases, "not X but Y" contrasts, triads, inflated claims, chatbot leftovers, plus Ukrainian-specific tells such as Russianisms, English calques, *-учий* participles, and missing vocative case. It keeps every fact and invents nothing.
 
-[paste your text here]
-```
+It edits **Word .docx** files and returns a tracked-changes copy and a clean copy. It also has a detect-only mode ("was this written by AI?") and a dependency-free linter. It works in Claude Code, Claude.ai, Codex, Cursor and any agent that reads `SKILL.md`.
 
-Or ask in plain language:
+Install: `npx skills add maximyaroshchuk/humanizer-ua`. Based on [blader/humanizer](https://github.com/blader/humanizer).
 
-```
-Please humanize this text: [your text]
-```
-
-To rewrite a file, give Humanizer its path:
-
-```
-Humanize the prose in docs/launch-post.md
-```
-
-### Match your voice
-
-If you want the rewrite to sound more like you, include a sample:
-
-```
-/humanizer
-
-Here's a sample of my writing for voice matching:
-[paste 2-3 paragraphs of your own writing]
-
-Now humanize this text:
-[paste AI text to humanize]
-```
-
-Humanizer follows the sample's rhythm, word choice, punctuation, and deliberate quirks, including dashes if you use them.
-
-## How it works
-
-A language model writes whatever is most likely to come next, so by default it makes the choice that fits the widest range of readers and subjects. A person chooses for one reader and one subject. Every tell Humanizer looks for is a form of that default choice: a sentence that signals importance instead of adding a fact, rhythm or formatting applied by rule, an ordinary fact dressed as a pivotal one, text left over from the chat, or a reply that re-explains what the reader already knows.
-
-> "LLMs use statistical algorithms to guess what should come next. The result tends toward the most statistically likely result that applies to the widest variety of cases."
-> Wikipedia, ["Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
-
-Humanizer marks every tell it finds, strongest first. It drafts a rewrite without treating the original structure as fixed, checks the draft against the patterns and the original claims, and then writes the final version. It does not make things up. A name, number, date, quote, citation, or other factual detail must come from the source or the writer, and if a sentence needs a detail that is missing, Humanizer asks instead of inventing one.
-
-When you paste text, Humanizer shows its work: the first rewrite, a short critique of anything that still sounds artificial, and the final version. Point it at a file and it changes only the prose, leaving code, data, frontmatter, and link targets alone. Personal writing keeps the writer's opinions and quirks. Technical and reference prose stays neutral and plain.
-
-## The 26 patterns
-
-The patterns are numbered by strength and frequency. The first five justify an edit on a single sighting. Patterns marked *weak alone* count only when several tells share a passage, because a careful writer may use any one of them on purpose.
-
-### A. Staging instead of stating
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 1 | **Not X but Y** | "It's not just X, it's Y", "This doesn't mean X. It means Y." | State the point directly |
-| 2 | **One-line closers and dramatic fragments** | "That is the real win." after every section; "This shows the importance of..." after an example; "No prior. No nostalgia." | Cut the closer that repeats or explains the example; merge fragments into a specific claim |
-| 3 | **Sayings that sound deep** | "At its core, what matters is...", "Symmetry is the language of trust" | Replace the saying with the specific claim |
-| 4 | **Staged run-up before the point** | "Let's dive in", "Honestly? It depends..." | Remove the run-up and state the point |
-| 5 | **Arguing with no one** | "This isn't mainly about...", "A tempting approach would be..." | Remove the unraised objection or fake option; keep any real claim |
-
-### B. Rhythm by rule
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 6 | **Forced triads** | "innovation, inspiration, and insights"; three examples plus a lesson | Use the number of items the meaning needs |
-| 7 | **Repeated sentence openings** | "She noted... She noted... She filed..." | Merge the sentences or change the subject |
-| 8 | **Dashes as the universal connector** (*weak alone*) | "institutions—not the people—yet this continues—" | Use periods, commas, colons, or parentheses; match a sample that uses dashes |
-| 9 | **Stacked qualifiers** (*weak alone*) | "could potentially possibly be argued" | Keep only qualifiers the source supports |
-| 10 | **Hyphenated pairs everywhere** (*weak alone*) | "the report is high-quality" | Keep the hyphen before the noun or where the dictionary has one |
-| 11 | **Passive voice and missing subjects** (*weak alone*) | "No configuration file needed" | Name the actor when that helps |
-
-### C. Inflation and borrowed authority
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 12 | **Overused AI words** | "delve... testament... landscape... showcasing" | Use plain words |
-| 13 | **Inflated significance** | "marking a pivotal moment", "Despite challenges... continues to thrive", "The future looks bright" | Keep the fact and drop the significance; end on the last concrete fact |
-| 14 | **Vague connection or association** | "associated with the leadership of", "in connection with" | State the relationship the source gives |
-| 15 | **Shallow -ing riders** | "symbolizing... reflecting... showcasing..." | Keep only what the source supports |
-| 16 | **Sales language** | "nestled within the breathtaking region" | State what the thing is |
-| 17 | **Borrowed authority** | "Experts believe...", "cited in NYT, BBC, FT, and The Hindu" | Name a real source and what it said, or remove the claim or list |
-| 18 | **Avoiding is, are, and has** | "serves as... features... boasts" | "is... has" |
-
-### D. Formatting by rule
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 19 | **Bold as decoration** | "**OKRs**, **KPIs**"; "**Performance:** Performance improved" | Remove the bold; turn a labeled list into prose |
-| 20 | **Decorative headings** | "Strategic Negotiations And Partnerships", "🚀 Launch Phase:", "The decision, on one screen" | Sentence case; remove emojis and arrows; name what the section holds |
-| 21 | **Curly quotation marks** (*weak alone*) | `said “the project”` | `said "the project"` |
-
-### E. Leftovers from the chat and the draft
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 22 | **Chatbot residue** | "Great question! ... I hope this helps!" | Remove the wrapper and keep the content |
-| 23 | **Knowledge-limit disclaimers and guesses** | "While details are limited in available sources, it appears..." | State what the source shows, or remove the sentence |
-| 24 | **A heading repeated in the first sentence** | "## Performance" + "Speed matters." | Let the heading do the work |
-| 25 | **Writing about the document instead of its subject** | "This function was added to replace...", "compiled from...", "The table below compares..." | Describe the subject; state a convention only when the reader cannot see it |
-
-### F. Writing for the wrong reader
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 26 | **Re-explaining what the reader knows** | A reply that walks the diagnosis and proves the plan works before the decision | Lead with the decision; leave the diagnosis and the proof for the ticket that follows |
-
-## Full example
-
-**Before (AI-sounding):**
-> I recently spent five unforgettable days in Lisbon last October, and let me tell you — this city completely stole my heart. From the moment I checked into my charming hotel perched high in the historic Alfama district, I knew I was somewhere truly special.
->
-> Yes, the famous hills are challenging — with countless stairs between my hotel and everything else, my legs certainly felt it! — but every climb rewards you with breathtaking, panoramic views that make it all worthwhile.
->
-> No trip would be complete without riding the iconic Tram 28, a roughly forty-minute journey shared with plenty of fellow travelers eager to capture the magic. And the food? Simply divine. While the pastéis de nata at Pastéis de Belém are a beloved national treasure, my absolute favorite came from a hidden gem in Graça, still warm from the oven.
->
-> But what truly makes Lisbon special isn't just the sights — it's the feeling. Wander just a block or two above the main squares and you'll discover a quieter, more authentic side of the city, inviting you to slow down and savor every moment.
->
-> Of course, the must-see São Jorge Castle offers stunning views over the rooftops below. The queues can be long, but the experience is absolutely worth it for any history buff or curious traveler.
->
-> Would I go back? Absolutely — next time in spring, and with better shoes! Lisbon isn't just a place to visit; it's a place to fall in love with, again and again. ✨
-
-**After:**
-> I spent five days in Lisbon last October. My hotel was up in Alfama, with a lot of stairs between it and everything else, and my legs felt every one of them. The views from the top were worth the climb.
->
-> Everyone tells you to ride Tram 28, so I did. The trip took about forty minutes, and most of the car was other tourists taking pictures out the windows. The custard tarts at Pastéis de Belém are the famous ones, but my favorite came from a place in Graça, still warm from the oven.
->
-> The part of Lisbon I liked best starts a block or two above the main squares, where the streets go quiet and nobody is in a hurry. São Jorge Castle has good views over the rooftops and a long queue to get them.
->
-> I'd go back, in spring next time, and with better shoes.
-
-## Sources
-
-- [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) is the source for the pattern list.
-- [WikiProject AI Cleanup](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_AI_Cleanup) maintains the page.
-
-## Version history
-
-See [CHANGELOG.md](CHANGELOG.md).
-
-## License
-
-MIT
-
-If Humanizer helps you, a star helps other people find it.
+</details>

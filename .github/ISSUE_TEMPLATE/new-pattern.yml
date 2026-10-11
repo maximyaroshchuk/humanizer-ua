@@ -1,24 +1,29 @@
-name: New tell
-description: A sign of AI writing that no current pattern catches.
+name: Нова ознака ШІ або русизм
+description: Ознака ШІ-тексту чи зворот, якого не ловить жоден патерн або словник.
 labels: ["enhancement"]
 body:
   - type: textarea
     id: before
     attributes:
-      label: Example
-      description: Real text that shows the tell. Remove anything private.
+      label: Приклад
+      description: Справжній текст з ознакою. Прибери все приватне.
     validations:
       required: true
   - type: textarea
     id: after
     attributes:
-      label: How a person would write it
+      label: Як написала б людина
     validations:
       required: true
   - type: textarea
+    id: source
+    attributes:
+      label: Джерело норми
+      description: Для русизму чи кальки — словник або посібник (Антоненко-Давидович, Пономарів, Караванський, правопис), де це описано.
+  - type: textarea
     id: why
     attributes:
-      label: Why no current pattern covers it
-      description: Name the closest existing pattern and say why it misses this. Most new tells fit into an existing pattern.
+      label: Чому наявний патерн цього не покриває
+      description: Назви найближчий патерн і поясни, чому він не підходить. Більшість нових ознак вписуються в наявні.
     validations:
       required: true

@@ -1,44 +1,47 @@
-name: Rewrite problem
-description: A rewrite kept a tell, changed the meaning, added a fact, or over-edited.
+name: Проблема з правкою
+description: Правка залишила ознаку, змінила зміст, додала факт, зіпсувала норму чи docx.
 labels: ["bug"]
 body:
   - type: dropdown
     id: problem
     attributes:
-      label: What went wrong
+      label: Що пішло не так
       options:
-        - A tell survived the rewrite
-        - The rewrite added or dropped a fact
-        - The rewrite changed text that was fine
-        - Something else
+        - Ознака ШІ залишилася після правки
+        - Правка додала або загубила факт
+        - Правка змінила текст, який був у порядку
+        - Правка порушила мовну норму
+        - Лінтер помиляється (хибне спрацювання чи пропуск)
+        - Файл .docx пошкоджено або втрачено форматування
+        - Інше
     validations:
       required: true
   - type: textarea
     id: input
     attributes:
-      label: Input text
-      description: The text you gave Humanizer. Remove anything private.
+      label: Вхідний текст
+      description: Текст, який ти дав скілу. Прибери все приватне. Для docx — опиши будову файлу або додай мінімальний приклад.
     validations:
       required: true
   - type: textarea
     id: call
     attributes:
-      label: How you called it
-      description: The agent and model you used, and your exact prompt.
-      placeholder: "Claude Code, Opus 5.5: /humanizer then pasted the text"
+      label: Як викликав
+      description: Агент, модель і точний запит.
+      placeholder: "Claude Code, Opus 5.5: /humanizer-ua і вставлений текст"
     validations:
       required: true
   - type: textarea
     id: output
     attributes:
-      label: Output
-      description: What Humanizer returned.
+      label: Результат
+      description: Що повернув скіл.
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: What it should have done
-      description: Quote the sentence that is wrong and say what a careful writer would write. Name the pattern number if you know it.
+      label: Як мало бути
+      description: Процитуй хибне речення і напиши, як написав би уважний редактор. Вкажи номер патерна, якщо знаєш.
     validations:
       required: true

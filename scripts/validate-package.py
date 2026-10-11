@@ -1,146 +1,155 @@
 #!/usr/bin/env python3
-"""Check Humanizer's package files without external dependencies."""
+"""Перевіряє файли пакета humanizer-ua без сторонніх залежностей.
 
+Використання:
+    python3 scripts/validate-package.py
+
+Перевіряє: метадані SKILL.md, одну версію в усіх файлах, однаковий опис у маніфестах,
+нумерацію патернів у references/patterns.md і її збіг із картою в SKILL.md та
+таблицею в README.md, посилання §N, формат словника references/surzhyk.md,
+обсяг SKILL.md і коректність evals/evals.json.
+"""
 from __future__ import annotations
 
 import json
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
+SKILL_WORD_LIMIT = 4500
 
 
-def read_package_file(path: Path) -> str:
+def read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except OSError as error:
-        raise SystemExit(f"Cannot read {path.relative_to(ROOT)}: {error}")
+        raise SystemExit(f"Не вдалося прочитати {path.relative_to(ROOT)}: {error}")
 
 
-SKILL_PATH = ROOT / "SKILL.md"
-SKILL = read_package_file(SKILL_PATH)
-README = read_package_file(ROOT / "README.md")
-CHANGELOG = read_package_file(ROOT / "CHANGELOG.md")
-try:
-    PLUGIN = json.loads(read_package_file(ROOT / ".claude-plugin" / "plugin.json"))
-except json.JSONDecodeError as error:
-    raise SystemExit(f"Fix the JSON in .claude-plugin/plugin.json: {error}")
-try:
-    CURSOR_PLUGIN = json.loads(
-        read_package_file(ROOT / ".cursor-plugin" / "plugin.json")
-    )
-except json.JSONDecodeError as error:
-    raise SystemExit(f"Fix the JSON in .cursor-plugin/plugin.json: {error}")
+def load_json(path: Path):
+    try:
+        return json.loads(read(path))
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"Виправ JSON у {path.relative_to(ROOT)}: {error}")
 
 
-def require_match(match: re.Match[str] | None, message: str) -> re.Match[str]:
+def need(match, message):
     if match is None:
         raise SystemExit(message)
     return match
 
 
-yaml_metadata = require_match(
-    re.match(r"\A---\n(.*?)\n---\n", SKILL, re.DOTALL),
-    "SKILL.md must begin with YAML metadata",
-).group(1)
+SKILL = read(ROOT / "SKILL.md")
+README = read(ROOT / "README.md")
+CHANGELOG = read(ROOT / "CHANGELOG.md")
+PATTERNS = read(ROOT / "references" / "patterns.md")
+SURZHYK = read(ROOT / "references" / "surzhyk.md")
+LINT = read(ROOT / "scripts" / "lint.py")
+PLUGIN = load_json(ROOT / ".claude-plugin" / "plugin.json")
+MARKETPLACE = load_json(ROOT / ".claude-plugin" / "marketplace.json")
+EVALS = load_json(ROOT / "evals" / "evals.json")
 
-for unsupported_field in ("version:", "compatibility:", "allowed-tools:"):
-    if re.search(rf"(?m)^{re.escape(unsupported_field)}", yaml_metadata):
-        raise SystemExit(f"Remove unsupported YAML field: {unsupported_field[:-1]}")
+# --- метадані SKILL.md ---
+meta = need(re.match(r"\A---\n(.*?)\n---\n", SKILL, re.S), "SKILL.md має починатися з YAML-метаданих").group(1)
+for field in ("version:", "compatibility:", "allowed-tools:"):
+    if re.search(rf"(?m)^{re.escape(field)}", meta):
+        raise SystemExit(f"Прибери непідтримуване поле YAML верхнього рівня: {field[:-1]}")
+if not re.search(r"(?m)^name: humanizer-ua$", meta):
+    raise SystemExit("У SKILL.md має бути name: humanizer-ua")
+description = " ".join(need(re.search(r"(?m)^description: \|\n((?:  .*\n)+)", meta + "\n"),
+                            "Запиши description у SKILL.md блоком із відступом").group(1).split())
 
-skill_version = require_match(
-    re.search(r'(?m)^\s+version:\s*["\']?([0-9]+\.[0-9]+\.[0-9]+)["\']?\s*$', yaml_metadata),
-    "Add metadata.version to SKILL.md as a three-part version",
-).group(1)
-changelog_version = require_match(
-    re.search(r"(?m)^## ([0-9]+\.[0-9]+\.[0-9]+)$", CHANGELOG),
-    "Add a version heading to CHANGELOG.md",
-).group(1)
+if len(description) > 1024:
+    raise SystemExit(f"description у SKILL.md довший за 1024 символи ({len(description)}): Claude.ai його не прийме")
 
-package_versions = {
-    skill_version,
-    changelog_version,
-    str(PLUGIN.get("version", "")),
-    str(CURSOR_PLUGIN.get("version", "")),
+# --- версія ---
+versions = {
+    "SKILL.md": need(re.search(r'(?m)^\s+version:\s*["\']?(\d+\.\d+\.\d+)["\']?\s*$', meta),
+                     "Додай metadata.version у SKILL.md").group(1),
+    "CHANGELOG.md": need(re.search(r"(?m)^## (\d+\.\d+\.\d+)\b", CHANGELOG),
+                         "Додай заголовок версії «## X.Y.Z» у CHANGELOG.md").group(1),
+    "plugin.json": str(PLUGIN.get("version", "")),
 }
-if len(package_versions) != 1:
-    raise SystemExit(
-        f"Use one package version in all files: {sorted(package_versions)}"
-    )
+if len(set(versions.values())) != 1:
+    raise SystemExit(f"Одна версія в усіх файлах: {versions}")
+version = versions["SKILL.md"]
 
-skill_files = {path.relative_to(ROOT) for path in ROOT.rglob("SKILL.md")}
-if SKILL_PATH.is_symlink() or skill_files != {Path("SKILL.md")}:
-    raise SystemExit("Keep one regular SKILL.md at the repo root")
+# --- маніфести ---
+if {PLUGIN.get("name"), *(p.get("name") for p in MARKETPLACE.get("plugins", []))} != {"humanizer-ua"}:
+    raise SystemExit("Назва плагіна в маніфестах має бути humanizer-ua")
 if PLUGIN.get("skills") != ["./"]:
-    raise SystemExit("Point the Claude plugin skill loader at the repo root")
-if CURSOR_PLUGIN.get("name") != "humanizer":
-    raise SystemExit("Set the Cursor plugin name to humanizer")
-if "skills" in CURSOR_PLUGIN:
-    raise SystemExit("Omit skills from the Cursor plugin so it loads the root SKILL.md")
+    raise SystemExit("Плагін Claude має вказувати skills: [\"./\"]")
+manifest_descriptions = {PLUGIN.get("description", ""),
+                         *(p.get("description", "") for p in MARKETPLACE.get("plugins", []))}
+if len(manifest_descriptions) != 1 or not description.startswith(next(iter(manifest_descriptions))):
+    raise SystemExit("Опис у маніфестах має дорівнювати першому реченню description зі SKILL.md: "
+                     f"{sorted(manifest_descriptions)}")
+skill_files = {p.relative_to(ROOT) for p in ROOT.rglob("SKILL.md") if "dist" not in p.parts}
+if skill_files != {Path("SKILL.md")}:
+    raise SystemExit("Має бути один SKILL.md у корені репо")
 
-skill_description = " ".join(
-    require_match(
-        re.search(r"(?m)^description: \|\n((?:  .*\n)+)", yaml_metadata + "\n"),
-        "Write the SKILL.md description as an indented block",
-    ).group(1).split()
-)
-MARKETPLACE = json.loads(read_package_file(ROOT / ".claude-plugin" / "marketplace.json"))
-package_descriptions = {
-    str(PLUGIN.get("description", "")),
-    str(CURSOR_PLUGIN.get("description", "")),
-    *(str(plugin.get("description", "")) for plugin in MARKETPLACE.get("plugins", [])),
-}
-if len(package_descriptions) != 1 or not skill_description.startswith(
-    next(iter(package_descriptions))
-):
-    raise SystemExit(
-        "Use the first sentence of the SKILL.md description in every plugin manifest: "
-        f"{sorted(package_descriptions)}"
-    )
+# --- патерни ---
+patterns = {int(n): name.strip() for n, name in re.findall(r"(?m)^### (\d+)\. (.+)$", PATTERNS)}
+numbers = list(patterns)
+count = len(numbers)
+if not count or numbers != list(range(1, count + 1)):
+    raise SystemExit(f"Пронумеруй патерни в references/patterns.md з 1 без пропусків: {numbers}")
+if f"({count} патерн" not in PATTERNS.splitlines()[0]:
+    raise SystemExit(f"Заголовок references/patterns.md має назвати кількість: «({count} патерни)»")
 
-skill_patterns = dict(
-    (int(number), name)
-    for number, name in re.findall(r"(?m)^### ([0-9]+)\. (.+)$", SKILL)
-)
-pattern_numbers = list(skill_patterns)
-pattern_count = len(pattern_numbers)
-if pattern_count == 0 or pattern_numbers != list(range(1, pattern_count + 1)):
-    raise SystemExit(f"Number SKILL.md patterns from 1 upward without gaps: {pattern_numbers}")
 
-readme_patterns = dict(
-    (int(number), name)
-    for number, name in re.findall(r"(?m)^\| ([0-9]+) \| \*\*(.+?)\*\*", README)
-)
-if sorted(readme_patterns) != pattern_numbers:
-    raise SystemExit(
-        f"List patterns 1 through {pattern_count} once each in the README tables: {sorted(readme_patterns)}"
-    )
-renamed = [
-    f"{number}: {readme_patterns[number]!r} should be {name!r}"
-    for number, name in skill_patterns.items()
-    if readme_patterns[number] != name
-]
-if renamed:
-    raise SystemExit("Match the README pattern names to SKILL.md: " + "; ".join(renamed))
-if f"## The {pattern_count} patterns" not in README:
-    raise SystemExit(f"Title the README pattern section 'The {pattern_count} patterns'")
+def table(text, where):
+    rows = {int(n): name.strip() for n, name in re.findall(r"(?m)^\| (\d+) \| ([^|]+?) \|", text)}
+    if sorted(rows) != numbers:
+        raise SystemExit(f"Таблиця патернів у {where} має містити 1–{count} по одному разу: {sorted(rows)}")
+    wrong = [f"{n}: «{rows[n]}» ≠ «{patterns[n]}»" for n in numbers if rows[n] != patterns[n]]
+    if wrong:
+        raise SystemExit(f"Назви патернів у {where} мають збігатися з references/patterns.md: " + "; ".join(wrong))
 
-# A renumber can leave a section reference pointing at the wrong pattern or at
-# nothing. CHANGELOG.md keeps the numbers each release used, so read SKILL.md only.
-skill_references = sorted({int(number) for number in re.findall(r"§([0-9]+)", SKILL)})
-missing_patterns = [
-    number for number in skill_references if not 1 <= number <= pattern_count
-]
-if missing_patterns:
-    raise SystemExit(
-        f"Point every SKILL.md section reference at a pattern from 1 to "
-        f"{pattern_count}: {missing_patterns}"
-    )
 
-# Every word of SKILL.md is read on each use, so the budget is in words.
-skill_words = len(SKILL.split())
-if skill_words > 5500:
-    raise SystemExit(f"Keep SKILL.md at 5,500 words or fewer; it has {skill_words}")
+table(SKILL, "SKILL.md")
+table(README, "README.md")
+for name, text in (("SKILL.md", SKILL), ("README.md", README)):
+    if f"{count} патерн" not in text:
+        raise SystemExit(f"{name} має називати актуальну кількість патернів: {count}")
 
-print(f"Humanizer package v{skill_version} is valid")
+# --- посилання §N ---
+for name, text in (("SKILL.md", SKILL), ("references/patterns.md", PATTERNS),
+                   ("references/surzhyk.md", SURZHYK), ("scripts/lint.py", LINT)):
+    bad = sorted({int(n) for n in re.findall(r"§(\d+)", text)} - set(numbers))
+    if bad:
+        raise SystemExit(f"{name}: посилання § мають вказувати на патерни 1–{count}: {bad}")
+
+# --- словник ---
+entry_rx = re.compile(r"^- \*\*(.+?)\*\*.*?→\s*(.+?)\s·\s(ERROR|WARN)\s·\s§(\d+)\s·\s`(.+)`\s*$")
+entries = 0
+for i, line in enumerate(SURZHYK.splitlines(), 1):
+    if not line.startswith("- **"):
+        continue
+    m = entry_rx.match(line)
+    if not m:
+        raise SystemExit(f"references/surzhyk.md:{i}: рядок не відповідає формату «- **…** → … · РІВЕНЬ · §N · `regex`»")
+    try:
+        re.compile(m.group(5), re.I)
+    except re.error as error:
+        raise SystemExit(f"references/surzhyk.md:{i}: некоректний регулярний вираз: {error}")
+    entries += 1
+if entries < 50:
+    raise SystemExit(f"У словнику лише {entries} записів — схоже, формат зламано")
+
+# --- обсяг ---
+words = len(SKILL.split())
+if words > SKILL_WORD_LIMIT:
+    raise SystemExit(f"SKILL.md читається щоразу повністю: тримай до {SKILL_WORD_LIMIT} слів, зараз {words}")
+
+# --- evals ---
+evals = EVALS.get("evals", [])
+ids = [e.get("id") for e in evals]
+if not evals or len(ids) != len(set(ids)):
+    raise SystemExit("evals/evals.json: потрібні сценарії з унікальними id")
+for e in evals:
+    if not e.get("prompt") or not e.get("expectations"):
+        raise SystemExit(f"evals/evals.json: сценарій {e.get('id')} має мати prompt і expectations")
+
+print(f"humanizer-ua v{version}: {count} патернів, {entries} записів словника, "
+      f"{len(evals)} сценаріїв, SKILL.md {words} слів — пакет коректний")

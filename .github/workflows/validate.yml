@@ -21,6 +21,10 @@ jobs:
           python-version: "3.12"
       - name: Check package files
         run: python3 scripts/validate-package.py
+      - name: Self-test linter
+        run: python3 scripts/lint.py --self-test
+      - name: Self-test docx tool
+        run: python3 scripts/docx_tool.py --self-test
       - name: Check skill discovery
         run: npx --yes skills@1.5.20 add . --list
       - name: Check Claude marketplace
